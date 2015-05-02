@@ -22,8 +22,8 @@ class Harvest
             @options["prefix"] ||= @options["p"]
             @options["config"] ||= @options["c"]
             @options["help"] ||= @options["h"]
-        # rescue
-        #     return showHelp
+        rescue
+            return showHelp
         end
         @baseurl ,*@patterns = argv
 
