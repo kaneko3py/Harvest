@@ -2,8 +2,9 @@
 # coding: utf-8
 
 # Harvest
-# is auto image/script/content downloder, auto find these and download
+# is simple downloder for web contents like image, article and script.
 # 2015-03-19 ko.kaneko
+
 require "optparse"
 require "uri"
 require "fileutils"
@@ -17,22 +18,26 @@ class Harvest
 
     def self.execute(argv)
         begin
-            @options = argv.getopts("f:p:c:h","folder:","prefix:","config:","help")
+            @options = argv.getopts("f:p:c:l:ih","folder:","prefix:","config:","list:","info","help")
             @options["folder"] ||= @options["f"]
             @options["prefix"] ||= @options["p"]
             @options["config"] ||= @options["c"]
+            @options["list"] ||= @options["l"]
+            @options["info"] ||= @options["i"]
             @options["help"] ||= @options["h"]
         rescue
             return showHelp
         end
-        @baseurl ,*@patterns = argv
 
         # if config option is set
         if (@options["config"])
+            url = argv[0]
             argv.clear
             argv << "--folder" << @options["folder"] if @options["folder"]
             argv << "--prefix" << @options["prefix"] if @options["prefix"]
-            argv << @baseurl
+            argv << "--list" << @options["list"] if @options["list"]
+            argv << "--info" if @options["info"]
+            argv << url unless url.nil?
             begin
                 file = File.open(File.dirname(__FILE__) + "/#{@options["config"]}","r")
                 file.read.split(/\n/).reject(&:empty?).each {|conf|
@@ -46,10 +51,44 @@ class Harvest
             execute argv
             return
         end
+
+        # if list option is set
+        if (@options["list"])
+            begin
+                url_list = []
+                file = File.open(File.dirname(__FILE__) + "/#{@options["list"]}","r")
+                file.read.split(/\n/).reject(&:empty?).each {|search_url|
+                    url_list << search_url
+                }
+            rescue
+                puts '* failed to read a list file'
+                return
+            end
+
+            # multiple search
+            _argv = argv.clone
+            url_list.each do |search_url|
+                argv.clear
+                argv << "--folder" << @options["folder"] if @options["folder"]
+                argv << "--prefix" << @options["prefix"] if @options["prefix"]
+                argv << "--info" if @options["info"]
+                argv << search_url
+                argv.concat(_argv)
+
+                execute argv
+
+                puts '-' * 50 # comment line
+            end
+
+            return
+        end
+
         # if help option is set or argv is less
         if (@options["help"] || argv.length < 2)
             return showHelp
         end
+
+        @baseurl ,*@patterns = argv
 
         # start search and download process
         puts "open: \"#{@baseurl}\""
@@ -69,7 +108,7 @@ class Harvest
     	if url =~ /^\//
         	return pairent_url.slice(/^https?:\/\/[^\/]*/) + url
     	else
-    		return pairent_url.slice(/^https?:\/\/.*\//) + url
+    		return pairent_url.slice(/^https?:\/\/.*\/?/) + url
     	end
     end
 
@@ -99,16 +138,21 @@ class Harvest
                 retry_cnt += 1
                 retry
             end
-            return puts "* not valid url"
+            puts "* not valid url" if @options["info"]
+            return
         end
+
         elements = html.css(@patterns[tier])
-        return puts "* no elements matched pattern" if elements.empty?
+        if elements.empty?
+            puts "* no elements matched pattern: #{@patterns[tier]}"  if @options["info"]
+            return
+        end
 
         elements.each do |element|
             el_url = getFullUrl(element["href"] || element["src"], url)
             if tier < @patterns.length - 1
                 # Search
-                puts "#{">" * (tier+1)}dive: \"#{el_url}\" "
+                puts "#{">" * (tier+1)}search: \"#{el_url}\" " if @options["info"]
                 search(el_url, tier + 1)
             else
                 # Download
@@ -142,12 +186,16 @@ end
 Harvest::execute ARGV
 
 __END__
-Usage: harvest [options] <baseurl> <pattern> [pattern] [..]
-  baseurl         target url   ex)http://abc.com
+Usage: harvest [options] base_url pattern [pattern]..
+  base_url        target url  ex)http://abc.com
   pattern         css pattern  ex)article a  ex)img.class
                   *url mattched last pattern will be downloaded
                   *url mattched other pattern find the next page
-  -f --folder     set download folder name
-  -p --prefix     set prefix to the download file name
-  -c --config     use config file which wrote settings
-  -h --help       show help
+  options
+    -f --folder   set download folder name
+    -p --prefix   set prefix to the download file name
+    -c --config   use config file which wrote settings
+    -l --list     use list file which wrote target urls
+    -i --info     show process of searching files
+    -h --help     show help
+
