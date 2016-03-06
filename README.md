@@ -11,17 +11,21 @@ is used to find download contents.
    * Other dependent gems will be installed
 
 ## Usage
-  Usage: harvest [options] <baseurl> <pattern> [pattern] [..]
-    baseurl         target url   ex)http://abc.com
-    pattern         css pattern  ex)article a  ex)img.class
-                    *url mattched last pattern will be downloaded
-                    *url mattched other pattern find the next page
-    -f --folder     set download folder name
-    -p --prefix     set prefix to the download file name
-    -c --config     use config file which wrote settings
-    -l --list       use list file which wrote target urls
-    -i --info       show process of searching files
-    -h --help       show help
+```
+Usage: harvest [options] base_url pattern [pattern]..
+  base_url        target url  ex)http://abc.com
+  pattern         css pattern  ex)article a  ex)img.class
+                  *url mattched last pattern will be downloaded
+                  *url mattched other pattern find the next page
+  options
+    -f --folder   set download folder name
+    -p --prefix   set prefix to the download file name
+    -c --config   use config file which wrote settings
+    -l --list     use list file which wrote target urls
+    -i --info     show process of searching files
+    -h --help     show help
+```
+
 
 
 
